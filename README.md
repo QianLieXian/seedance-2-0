@@ -8,17 +8,19 @@
 - 前端页面覆盖 Seedance 2.0 教程中的常见能力：
   - 文本生视频
   - 首帧图生视频
-  - 首尾帧生视频
-  - 多模态参考生视频
+  - 首尾帧生视频（`last_frame_image_url`）
+  - 多模态参考生视频（图/视频/音频/文本）
   - 编辑视频
-  - 延长视频
-- 覆盖输出控制参数：`resolution`、`ratio`、`duration`、`frames`、`fps`、`seed`、`camera_fixed`、`watermark`、`num_outputs`、`generate_audio`、`return_draft` 等。
+  - 延长视频（`extend_task_id` -> `task_id`）
+  - 样片能力相关参数（`return_draft`、`draft_task_id`）
+  - 返回尾帧（`return_last_frame`）
+- 覆盖输出控制参数：`resolution`、`ratio`、`duration`、`frames`、`fps`、`seed`、`camera_fixed`、`watermark`、`n`、`generate_audio`、`return_draft` 等。
 - 模型可选：
   - `doubao-seedance-2-0-260128`（默认）
   - `doubao-seedance-2-0-fast-260128`
 - API Key 在浏览器内临时填写，后端不保存。
 - 提供 `advanced_json` 输入框，可补充/覆盖官方文档新增参数。
-- 后端封装常见 API：创建任务、查询任务、查询任务列表。
+- 后端封装常见 API：创建任务、查询任务、查询任务列表、删除/取消任务。
 
 ## 环境变量
 
@@ -39,6 +41,7 @@ python app.py
 
 本项目根据以下文档整理参数与能力：
 
+- <https://www.volcengine.com/docs/82379/1399008?lang=zh>
 - <https://www.volcengine.com/docs/82379/2291680?lang=zh>
 - <https://www.volcengine.com/docs/82379/2222480?lang=zh>
 - <https://www.volcengine.com/docs/82379/2298881?lang=zh>
