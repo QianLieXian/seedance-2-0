@@ -21,7 +21,7 @@
 </head>
 <body>
   <h1>Seedance 2.0 全功能前端示例（Python + HTML）</h1>
-  <p>支持：文本生视频、多模态参考、编辑视频、延长视频、首帧图生视频、首尾帧生视频，以及秒数/数量/分辨率/比例等参数；并提供高级 JSON 扩展区，便于补充最新文档参数。</p>
+  <p>覆盖教程：多模态参考、编辑视频、延长视频、首帧图生视频、首尾帧生视频、输出规格参数（秒数/帧数/分辨率/比例/随机种子/机位/水印）以及 Draft/尾帧相关能力。</p>
 
   <div class="card">
     <h2>0) API Key（浏览器临时填写，不在后端保存）</h2>
@@ -74,10 +74,10 @@
 
       <div>
         <label>图片 URL 列表（每行一个）</label>
-        <textarea id="image_urls" placeholder="首帧图生视频：填 1 张；首尾帧：第一行首帧图；多模态参考也可放这里。"></textarea>
+        <textarea id="image_urls" placeholder="首帧图生视频：填 1 张；首尾帧：第一行首帧图。"></textarea>
       </div>
       <div>
-        <label>尾帧图片 URL（首尾帧模式）</label>
+        <label>last_frame_image_url（首尾帧模式）</label>
         <input id="end_frame_url" placeholder="首尾帧生视频时填写末帧图 URL" />
       </div>
 
@@ -91,44 +91,26 @@
       </div>
 
       <div>
-        <label>参考图片 URLs</label>
-        <textarea id="reference_images" placeholder="多模态参考：每行一张参考图 URL。"></textarea>
+        <label>参考图片 URLs（每行一个）</label>
+        <textarea id="reference_images" placeholder="多模态参考教程支持 1~4 张；会自动并入 content 输入。"></textarea>
       </div>
       <div>
-        <label>参考视频 URLs</label>
-        <textarea id="reference_videos" placeholder="多模态参考：每行一个参考视频 URL。"></textarea>
+        <label>参考视频 URLs（每行一个）</label>
+        <textarea id="reference_videos" placeholder="多模态参考可加入视频参考；会自动并入 content 输入。"></textarea>
       </div>
 
       <div>
         <label>extend_task_id（延长视频）</label>
-        <input id="extend_task_id" placeholder="延长视频时可填已有任务 ID，用于续写。" />
+        <input id="extend_task_id" placeholder="延长视频时填写已有任务 ID（后端映射为 task_id）。" />
       </div>
       <div>
-        <label>num_outputs（输出数量）</label>
-        <input id="num_outputs" type="number" min="1" max="4" placeholder="如 1 / 2 / 3 / 4" />
-      </div>
-
-      <div>
-        <label>resolution（分辨率）</label>
-        <input id="resolution" placeholder="如 480p / 720p / 1080p（以模型支持为准）" />
-      </div>
-      <div>
-        <label>ratio（比例）</label>
-        <input id="ratio" placeholder="如 16:9 / 9:16 / 1:1 / 21:9" />
+        <label>draft_task_id（样片模式）</label>
+        <input id="draft_task_id" placeholder="可选：当使用 draft 模式时，填上一阶段 draft_task.id。" />
       </div>
 
       <div>
-        <label>duration（秒数）</label>
-        <input id="duration" type="number" min="1" placeholder="如 4/5/8/10/12 等，以模型支持为准" />
-      </div>
-      <div>
-        <label>frames（总帧数）</label>
-        <input id="frames" type="number" min="1" placeholder="可选：直接设定输出帧数" />
-      </div>
-
-      <div>
-        <label>fps（帧率）</label>
-        <input id="fps" type="number" min="1" placeholder="可选：例如 24 / 30" />
+        <label>n（输出数量）</label>
+        <input id="n" type="number" min="1" max="4" placeholder="如 1 / 2 / 3 / 4" />
       </div>
       <div>
         <label>seed（随机种子）</label>
@@ -136,8 +118,40 @@
       </div>
 
       <div>
-        <label>request_id（幂等请求ID）</label>
-        <input id="request_id" placeholder="可选：业务侧唯一ID" />
+        <label>resolution（分辨率）</label>
+        <select id="resolution">
+          <option value="">默认</option>
+          <option value="480p">480p</option>
+          <option value="720p">720p</option>
+          <option value="1080p">1080p</option>
+        </select>
+      </div>
+      <div>
+        <label>ratio（比例）</label>
+        <select id="ratio">
+          <option value="">默认</option>
+          <option value="adaptive">adaptive</option>
+          <option value="16:9">16:9</option>
+          <option value="9:16">9:16</option>
+          <option value="1:1">1:1</option>
+          <option value="4:3">4:3</option>
+          <option value="3:4">3:4</option>
+          <option value="21:9">21:9</option>
+        </select>
+      </div>
+
+      <div>
+        <label>duration（秒数）</label>
+        <input id="duration" type="number" min="1" placeholder="如 4~12；不同模型上限不同（文档有差异）" />
+      </div>
+      <div>
+        <label>frames（总帧数）</label>
+        <input id="frames" type="number" min="1" placeholder="可选。一般与 duration 二选一。" />
+      </div>
+
+      <div>
+        <label>fps（帧率）</label>
+        <input id="fps" type="number" min="1" placeholder="可选：例如 24 / 30" />
       </div>
       <div>
         <label>webhook_url（回调地址）</label>
@@ -145,26 +159,35 @@
       </div>
 
       <div>
+        <label>request_id（幂等请求ID）</label>
+        <input id="request_id" placeholder="可选：业务侧唯一ID" />
+      </div>
+      <div>
         <label>camera_fixed（固定机位）</label>
         <select id="camera_fixed"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
       </div>
+
       <div>
         <label>watermark（水印）</label>
         <select id="watermark"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
       </div>
-
       <div>
         <label>generate_audio（生成音频）</label>
         <select id="generate_audio"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
       </div>
+
       <div>
         <label>return_draft（先出 Draft）</label>
         <select id="return_draft"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
       </div>
+      <div>
+        <label>return_last_frame（返回尾帧）</label>
+        <select id="return_last_frame"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
+      </div>
 
       <div class="full">
         <label>advanced_json（高级参数，覆盖/补充以上所有字段）</label>
-        <textarea id="advanced_json" placeholder='示例：{"style":"cinematic","cfg_scale":7,"custom_key":"custom_value"}。仅支持 JSON Object。'></textarea>
+        <textarea id="advanced_json" placeholder='示例：{"service_tier":"default","custom_key":"custom_value"}。仅支持 JSON Object。'></textarea>
         <div class="muted">当官方文档新增参数时，可直接在这里补充，无需改代码。</div>
       </div>
     </div>
@@ -176,10 +199,11 @@
   </div>
 
   <div class="card">
-    <h2>3) 查询任务详情</h2>
+    <h2>3) 查询/删除任务</h2>
     <div class="actions">
       <input id="task_id" placeholder="输入任务 ID" />
       <button onclick="queryTask()">查询</button>
+      <button onclick="deleteTask()">删除/取消</button>
     </div>
   </div>
 
@@ -196,11 +220,11 @@ mode.addEventListener('change', () => {
   const m = mode.value;
   const tipMap = {
     t2v: '文本生视频：重点写清主体动作、镜头语言、光影风格、时长。',
-    i2v_first: '首帧图生视频：image_urls 填 1 张首帧图，ratio 尽量与图片一致。',
-    i2v_first_last: '首尾帧生视频：image_urls 第一行填首帧图，end_frame_url 填尾帧图。',
-    multimodal_ref: '多模态参考：同时填 reference_images/reference_videos，提示词说明参考和保留元素。',
+    i2v_first: '首帧图生视频：image_urls 填 1 张首帧图，ratio 建议 adaptive 或与图片一致。',
+    i2v_first_last: '首尾帧生视频：image_urls 第一行填首帧图，last_frame_image_url 填尾帧图。',
+    multimodal_ref: '多模态参考：参考图/参考视频会并入 content，提示词中建议用“图1/视频1”指代。',
     edit_video: '编辑视频：video_urls 填待编辑视频，提示词写替换/增删/局部修复指令。',
-    extend_video: '延长视频：优先填 extend_task_id，也可填视频+提示词进行续写。'
+    extend_video: '延长视频：优先填 extend_task_id；也可视频+提示词续写。'
   };
   document.getElementById('text_prompt').placeholder = tipMap[m];
 });
@@ -233,7 +257,8 @@ async function createTask(){
     reference_images: value('reference_images'),
     reference_videos: value('reference_videos'),
     extend_task_id: value('extend_task_id'),
-    num_outputs: value('num_outputs'),
+    draft_task_id: value('draft_task_id'),
+    n: value('n'),
     resolution: value('resolution'),
     ratio: value('ratio'),
     duration: value('duration'),
@@ -244,6 +269,7 @@ async function createTask(){
     watermark: value('watermark'),
     generate_audio: value('generate_audio'),
     return_draft: value('return_draft'),
+    return_last_frame: value('return_last_frame'),
     webhook_url: value('webhook_url'),
     request_id: value('request_id'),
     advanced_json: value('advanced_json')
@@ -265,6 +291,20 @@ async function queryTask(){
   if(!id){ alert('请先输入任务 ID'); return; }
   const res = await fetch(`/api/task/${id}`, {
     method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({api_key: apiKey})
+  });
+  output.textContent = JSON.stringify(await res.json(), null, 2);
+}
+
+async function deleteTask(){
+  const apiKey = requireApiKey();
+  if(!apiKey) return;
+
+  const id = value('task_id').trim();
+  if(!id){ alert('请先输入任务 ID'); return; }
+  const res = await fetch(`/api/task/${id}`, {
+    method: 'DELETE',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({api_key: apiKey})
   });
