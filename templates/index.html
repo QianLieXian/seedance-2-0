@@ -15,12 +15,19 @@
     textarea { min-height: 72px; }
     .actions { display: flex; gap: 10px; }
     .actions button { flex: 1; cursor: pointer; }
+    .muted { color: #5a6475; font-size: 12px; margin-top: 4px; }
     pre { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; min-height: 130px; }
   </style>
 </head>
 <body>
   <h1>Seedance 2.0 全功能前端示例（Python + HTML）</h1>
-  <p>支持：文本生视频、多模态参考、编辑视频、延长视频、首帧图生视频、首尾帧生视频，以及分辨率/比例/秒数/数量等输出参数。</p>
+  <p>支持：文本生视频、多模态参考、编辑视频、延长视频、首帧图生视频、首尾帧生视频，以及秒数/数量/分辨率/比例等参数；并提供高级 JSON 扩展区，便于补充最新文档参数。</p>
+
+  <div class="card">
+    <h2>0) API Key（浏览器临时填写，不在后端保存）</h2>
+    <input id="api_key" type="password" placeholder="请输入火山方舟 ARK API Key（仅当前页面内存使用）" />
+    <div class="muted">为了安全，刷新页面后会清空。后端不会写入文件或环境变量。</div>
+  </div>
 
   <div class="card">
     <h2>1) 本地文件上传/下载</h2>
@@ -29,11 +36,11 @@
       <button type="submit">上传到本服务（用于下载/暂存）</button>
     </form>
     <div id="uploadResult"></div>
-    <small>说明：Seedance API 对媒体输入通常要求公网 URL；本地上传后请再转存到对象存储/CDN。</small>
+    <small>支持上传视频、图片、文本等任意文件。Seedance API 通常需要公网 URL，请上传后再转存对象存储/CDN。</small>
   </div>
 
   <div class="card">
-    <h2>2) 创建任务（覆盖文档中常见能力）</h2>
+    <h2>2) 创建任务（覆盖文档能力）</h2>
     <div class="grid">
       <div>
         <label>功能模式</label>
@@ -47,18 +54,27 @@
         </select>
       </div>
       <div>
-        <label>Model ID</label>
-        <input id="model_id" value="{{ default_model }}" placeholder="例如: doubao-seedance-2-0-260128" />
+        <label>Model ID（默认标准版）</label>
+        <select id="model_id">
+          {% for model in models %}
+          <option value="{{ model }}" {% if model == default_model %}selected{% endif %}>{{ model }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <div class="full">
         <label>文本提示词（必读提示）</label>
-        <textarea id="text_prompt" placeholder="建议写法：主体 + 动作 + 场景 + 镜头 + 光线 + 风格 + 时长要求。编辑视频时可写‘将视频中XX改成XX，保持镜头运动不变’。"></textarea>
+        <textarea id="text_prompt" placeholder="建议写法：主体 + 动作 + 场景 + 镜头 + 光线 + 风格 + 时长要求。编辑视频时可写：将视频中XX改成XX，保持镜头运动和角色一致。"></textarea>
+      </div>
+
+      <div class="full">
+        <label>negative_prompt（负向提示词）</label>
+        <textarea id="negative_prompt" placeholder="示例：避免画面抖动、避免模糊、避免字幕水印、避免畸形手部。"></textarea>
       </div>
 
       <div>
         <label>图片 URL 列表（每行一个）</label>
-        <textarea id="image_urls" placeholder="首帧图生视频：填 1 张；首尾帧：第一行首帧图。多模态参考也可放这里。"></textarea>
+        <textarea id="image_urls" placeholder="首帧图生视频：填 1 张；首尾帧：第一行首帧图；多模态参考也可放这里。"></textarea>
       </div>
       <div>
         <label>尾帧图片 URL（首尾帧模式）</label>
@@ -75,11 +91,11 @@
       </div>
 
       <div>
-        <label>参考图片 URLs（1~9 常见）</label>
+        <label>参考图片 URLs</label>
         <textarea id="reference_images" placeholder="多模态参考：每行一张参考图 URL。"></textarea>
       </div>
       <div>
-        <label>参考视频 URLs（总时长常见≤15s）</label>
+        <label>参考视频 URLs</label>
         <textarea id="reference_videos" placeholder="多模态参考：每行一个参考视频 URL。"></textarea>
       </div>
 
@@ -94,16 +110,16 @@
 
       <div>
         <label>resolution（分辨率）</label>
-        <input id="resolution" placeholder="例如：480p / 720p / 1080p（以具体模型支持为准）" />
+        <input id="resolution" placeholder="如 480p / 720p / 1080p（以模型支持为准）" />
       </div>
       <div>
         <label>ratio（比例）</label>
-        <input id="ratio" placeholder="例如：16:9 / 9:16 / 1:1 / 21:9" />
+        <input id="ratio" placeholder="如 16:9 / 9:16 / 1:1 / 21:9" />
       </div>
 
       <div>
         <label>duration（秒数）</label>
-        <input id="duration" type="number" min="1" placeholder="例如：4, 8, 12, 15（按模型能力）" />
+        <input id="duration" type="number" min="1" placeholder="如 4/5/8/10/12 等，以模型支持为准" />
       </div>
       <div>
         <label>frames（总帧数）</label>
@@ -111,12 +127,21 @@
       </div>
 
       <div>
+        <label>fps（帧率）</label>
+        <input id="fps" type="number" min="1" placeholder="可选：例如 24 / 30" />
+      </div>
+      <div>
         <label>seed（随机种子）</label>
         <input id="seed" type="number" placeholder="复现风格时设置固定 seed" />
       </div>
+
       <div>
         <label>request_id（幂等请求ID）</label>
         <input id="request_id" placeholder="可选：业务侧唯一ID" />
+      </div>
+      <div>
+        <label>webhook_url（回调地址）</label>
+        <input id="webhook_url" placeholder="可选：任务状态变化回调 URL" />
       </div>
 
       <div>
@@ -138,8 +163,9 @@
       </div>
 
       <div class="full">
-        <label>webhook_url（任务回调地址）</label>
-        <input id="webhook_url" placeholder="可选：任务状态变化回调 URL" />
+        <label>advanced_json（高级参数，覆盖/补充以上所有字段）</label>
+        <textarea id="advanced_json" placeholder='示例：{"style":"cinematic","cfg_scale":7,"custom_key":"custom_value"}。仅支持 JSON Object。'></textarea>
+        <div class="muted">当官方文档新增参数时，可直接在这里补充，无需改代码。</div>
       </div>
     </div>
 
@@ -170,22 +196,36 @@ mode.addEventListener('change', () => {
   const m = mode.value;
   const tipMap = {
     t2v: '文本生视频：重点写清主体动作、镜头语言、光影风格、时长。',
-    i2v_first: '首帧图生视频：image_urls 填 1 张首帧图，ratio尽量与图片接近。',
-    i2v_first_last: '首尾帧生视频：image_urls 第一行填首帧图，end_frame_url填尾帧图。',
-    multimodal_ref: '多模态参考：可同时填 reference_images/reference_videos，建议提示词描述“参考什么、保留什么”。',
-    edit_video: '编辑视频：video_urls 填待编辑视频，提示词写“替换/增删/局部修复”指令。',
-    extend_video: '延长视频：优先填 extend_task_id，或填视频+提示词进行续写。'
+    i2v_first: '首帧图生视频：image_urls 填 1 张首帧图，ratio 尽量与图片一致。',
+    i2v_first_last: '首尾帧生视频：image_urls 第一行填首帧图，end_frame_url 填尾帧图。',
+    multimodal_ref: '多模态参考：同时填 reference_images/reference_videos，提示词说明参考和保留元素。',
+    edit_video: '编辑视频：video_urls 填待编辑视频，提示词写替换/增删/局部修复指令。',
+    extend_video: '延长视频：优先填 extend_task_id，也可填视频+提示词进行续写。'
   };
   document.getElementById('text_prompt').placeholder = tipMap[m];
 });
 
 function value(id){ return document.getElementById(id).value; }
 
+function requireApiKey(){
+  const key = value('api_key').trim();
+  if(!key){
+    alert('请先填写 API Key（仅用于当前请求，不会保存到后端）。');
+    return null;
+  }
+  return key;
+}
+
 async function createTask(){
+  const apiKey = requireApiKey();
+  if(!apiKey) return;
+
   const payload = {
+    api_key: apiKey,
     mode: value('mode'),
     model_id: value('model_id'),
     text_prompt: value('text_prompt'),
+    negative_prompt: value('negative_prompt'),
     image_urls: value('image_urls'),
     end_frame_url: value('end_frame_url'),
     video_urls: value('video_urls'),
@@ -198,13 +238,15 @@ async function createTask(){
     ratio: value('ratio'),
     duration: value('duration'),
     frames: value('frames'),
+    fps: value('fps'),
     seed: value('seed'),
     camera_fixed: value('camera_fixed'),
     watermark: value('watermark'),
     generate_audio: value('generate_audio'),
     return_draft: value('return_draft'),
     webhook_url: value('webhook_url'),
-    request_id: value('request_id')
+    request_id: value('request_id'),
+    advanced_json: value('advanced_json')
   };
 
   const res = await fetch('/api/create-task', {
@@ -216,14 +258,28 @@ async function createTask(){
 }
 
 async function queryTask(){
+  const apiKey = requireApiKey();
+  if(!apiKey) return;
+
   const id = value('task_id').trim();
   if(!id){ alert('请先输入任务 ID'); return; }
-  const res = await fetch(`/api/task/${id}`);
+  const res = await fetch(`/api/task/${id}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({api_key: apiKey})
+  });
   output.textContent = JSON.stringify(await res.json(), null, 2);
 }
 
 async function listTasks(){
-  const res = await fetch('/api/tasks?page_size=10');
+  const apiKey = requireApiKey();
+  if(!apiKey) return;
+
+  const res = await fetch('/api/tasks', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({api_key: apiKey, page_size: 10})
+  });
   output.textContent = JSON.stringify(await res.json(), null, 2);
 }
 
