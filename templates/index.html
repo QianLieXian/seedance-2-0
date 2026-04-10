@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seedance 2.0 全功能控制台（Python + HTML）</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f6f8fb; }
+    h1, h2 { margin: 8px 0; }
+    .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 12px; }
+    .full { grid-column: 1 / -1; }
+    label { font-weight: bold; display: block; margin-bottom: 4px; }
+    input, select, textarea, button { width: 100%; padding: 8px; box-sizing: border-box; }
+    textarea { min-height: 72px; }
+    .actions { display: flex; gap: 10px; }
+    .actions button { flex: 1; cursor: pointer; }
+    pre { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; min-height: 130px; }
+  </style>
+</head>
+<body>
+  <h1>Seedance 2.0 全功能前端示例（Python + HTML）</h1>
+  <p>支持：文本生视频、多模态参考、编辑视频、延长视频、首帧图生视频、首尾帧生视频，以及分辨率/比例/秒数/数量等输出参数。</p>
+
+  <div class="card">
+    <h2>1) 本地文件上传/下载</h2>
+    <form id="uploadForm">
+      <input type="file" name="file" required />
+      <button type="submit">上传到本服务（用于下载/暂存）</button>
+    </form>
+    <div id="uploadResult"></div>
+    <small>说明：Seedance API 对媒体输入通常要求公网 URL；本地上传后请再转存到对象存储/CDN。</small>
+  </div>
+
+  <div class="card">
+    <h2>2) 创建任务（覆盖文档中常见能力）</h2>
+    <div class="grid">
+      <div>
+        <label>功能模式</label>
+        <select id="mode">
+          <option value="t2v">文本生视频</option>
+          <option value="i2v_first">首帧图生视频</option>
+          <option value="i2v_first_last">首尾帧生视频</option>
+          <option value="multimodal_ref">多模态参考生视频</option>
+          <option value="edit_video">编辑视频</option>
+          <option value="extend_video">延长视频</option>
+        </select>
+      </div>
+      <div>
+        <label>Model ID</label>
+        <input id="model_id" value="{{ default_model }}" placeholder="例如: doubao-seedance-2-0-260128" />
+      </div>
+
+      <div class="full">
+        <label>文本提示词（必读提示）</label>
+        <textarea id="text_prompt" placeholder="建议写法：主体 + 动作 + 场景 + 镜头 + 光线 + 风格 + 时长要求。编辑视频时可写‘将视频中XX改成XX，保持镜头运动不变’。"></textarea>
+      </div>
+
+      <div>
+        <label>图片 URL 列表（每行一个）</label>
+        <textarea id="image_urls" placeholder="首帧图生视频：填 1 张；首尾帧：第一行首帧图。多模态参考也可放这里。"></textarea>
+      </div>
+      <div>
+        <label>尾帧图片 URL（首尾帧模式）</label>
+        <input id="end_frame_url" placeholder="首尾帧生视频时填写末帧图 URL" />
+      </div>
+
+      <div>
+        <label>视频 URL 列表（每行一个）</label>
+        <textarea id="video_urls" placeholder="编辑视频或多视频参考时填写。示例：原视频、样片视频。"></textarea>
+      </div>
+      <div>
+        <label>音频 URL 列表（每行一个）</label>
+        <textarea id="audio_urls" placeholder="可选：给模型提供音频参考。"></textarea>
+      </div>
+
+      <div>
+        <label>参考图片 URLs（1~9 常见）</label>
+        <textarea id="reference_images" placeholder="多模态参考：每行一张参考图 URL。"></textarea>
+      </div>
+      <div>
+        <label>参考视频 URLs（总时长常见≤15s）</label>
+        <textarea id="reference_videos" placeholder="多模态参考：每行一个参考视频 URL。"></textarea>
+      </div>
+
+      <div>
+        <label>extend_task_id（延长视频）</label>
+        <input id="extend_task_id" placeholder="延长视频时可填已有任务 ID，用于续写。" />
+      </div>
+      <div>
+        <label>num_outputs（输出数量）</label>
+        <input id="num_outputs" type="number" min="1" max="4" placeholder="如 1 / 2 / 3 / 4" />
+      </div>
+
+      <div>
+        <label>resolution（分辨率）</label>
+        <input id="resolution" placeholder="例如：480p / 720p / 1080p（以具体模型支持为准）" />
+      </div>
+      <div>
+        <label>ratio（比例）</label>
+        <input id="ratio" placeholder="例如：16:9 / 9:16 / 1:1 / 21:9" />
+      </div>
+
+      <div>
+        <label>duration（秒数）</label>
+        <input id="duration" type="number" min="1" placeholder="例如：4, 8, 12, 15（按模型能力）" />
+      </div>
+      <div>
+        <label>frames（总帧数）</label>
+        <input id="frames" type="number" min="1" placeholder="可选：直接设定输出帧数" />
+      </div>
+
+      <div>
+        <label>seed（随机种子）</label>
+        <input id="seed" type="number" placeholder="复现风格时设置固定 seed" />
+      </div>
+      <div>
+        <label>request_id（幂等请求ID）</label>
+        <input id="request_id" placeholder="可选：业务侧唯一ID" />
+      </div>
+
+      <div>
+        <label>camera_fixed（固定机位）</label>
+        <select id="camera_fixed"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
+      </div>
+      <div>
+        <label>watermark（水印）</label>
+        <select id="watermark"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
+      </div>
+
+      <div>
+        <label>generate_audio（生成音频）</label>
+        <select id="generate_audio"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
+      </div>
+      <div>
+        <label>return_draft（先出 Draft）</label>
+        <select id="return_draft"><option value="">默认</option><option value="true">true</option><option value="false">false</option></select>
+      </div>
+
+      <div class="full">
+        <label>webhook_url（任务回调地址）</label>
+        <input id="webhook_url" placeholder="可选：任务状态变化回调 URL" />
+      </div>
+    </div>
+
+    <div class="actions" style="margin-top: 12px;">
+      <button onclick="createTask()">创建任务</button>
+      <button onclick="listTasks()">查询任务列表</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3) 查询任务详情</h2>
+    <div class="actions">
+      <input id="task_id" placeholder="输入任务 ID" />
+      <button onclick="queryTask()">查询</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>返回结果</h2>
+    <pre id="output"></pre>
+  </div>
+
+<script>
+const output = document.getElementById('output');
+const mode = document.getElementById('mode');
+
+mode.addEventListener('change', () => {
+  const m = mode.value;
+  const tipMap = {
+    t2v: '文本生视频：重点写清主体动作、镜头语言、光影风格、时长。',
+    i2v_first: '首帧图生视频：image_urls 填 1 张首帧图，ratio尽量与图片接近。',
+    i2v_first_last: '首尾帧生视频：image_urls 第一行填首帧图，end_frame_url填尾帧图。',
+    multimodal_ref: '多模态参考：可同时填 reference_images/reference_videos，建议提示词描述“参考什么、保留什么”。',
+    edit_video: '编辑视频：video_urls 填待编辑视频，提示词写“替换/增删/局部修复”指令。',
+    extend_video: '延长视频：优先填 extend_task_id，或填视频+提示词进行续写。'
+  };
+  document.getElementById('text_prompt').placeholder = tipMap[m];
+});
+
+function value(id){ return document.getElementById(id).value; }
+
+async function createTask(){
+  const payload = {
+    mode: value('mode'),
+    model_id: value('model_id'),
+    text_prompt: value('text_prompt'),
+    image_urls: value('image_urls'),
+    end_frame_url: value('end_frame_url'),
+    video_urls: value('video_urls'),
+    audio_urls: value('audio_urls'),
+    reference_images: value('reference_images'),
+    reference_videos: value('reference_videos'),
+    extend_task_id: value('extend_task_id'),
+    num_outputs: value('num_outputs'),
+    resolution: value('resolution'),
+    ratio: value('ratio'),
+    duration: value('duration'),
+    frames: value('frames'),
+    seed: value('seed'),
+    camera_fixed: value('camera_fixed'),
+    watermark: value('watermark'),
+    generate_audio: value('generate_audio'),
+    return_draft: value('return_draft'),
+    webhook_url: value('webhook_url'),
+    request_id: value('request_id')
+  };
+
+  const res = await fetch('/api/create-task', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  output.textContent = JSON.stringify(await res.json(), null, 2);
+}
+
+async function queryTask(){
+  const id = value('task_id').trim();
+  if(!id){ alert('请先输入任务 ID'); return; }
+  const res = await fetch(`/api/task/${id}`);
+  output.textContent = JSON.stringify(await res.json(), null, 2);
+}
+
+async function listTasks(){
+  const res = await fetch('/api/tasks?page_size=10');
+  output.textContent = JSON.stringify(await res.json(), null, 2);
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const res = await fetch('/upload', { method: 'POST', body: formData });
+  const data = await res.json();
+  const el = document.getElementById('uploadResult');
+  if(data.download_url){
+    el.innerHTML = `上传成功：<a href="${data.download_url}">${data.filename}</a><br>${data.note}`;
+  }else{
+    el.textContent = JSON.stringify(data);
+  }
+});
+</script>
+</body>
+</html>
